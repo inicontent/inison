@@ -1,0 +1,52 @@
+{
+  "name": "inison",
+  "version": "1.0.0-rc.1",
+  "author": {
+    "name": "Karim Amahtil",
+    "email": "karim.amahtil@gmail.com"
+  },
+  "repository": "inicontent/inison",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bugs": {
+    "url": "https://github.com/inicontent/inison/issues"
+  },
+  "description": "An alternative to JSON, aiming to reduce disk usage by storing decoded data and eliminating double-quotes",
+  "files": [
+    "/dist"
+  ],
+  "funding": "https://github.com/sponsors/inicontent",
+  "homepage": "https://github.com/inicontent/inison#readme",
+  "keywords": [
+    "json",
+    "cson",
+    "hocon",
+    "bson",
+    "avro",
+    "messagepack",
+    "protobuf",
+    "json5",
+    "jsonc",
+    "xml",
+    "yaml"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "prepare": "npx tsc",
+    "build": "npx tsc"
+  },
+  "type": "module",
+  "types": "./dist",
+  "typesVersions": {
+    "*": {
+      "class": [
+        "./dist/index.d.ts"
+      ]
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

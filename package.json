@@ -35,13 +35,14 @@
   "license": "MIT",
   "scripts": {
     "prepare": "npx tsc",
-    "build": "npx tsc"
+    "build": "npx tsc",
+    "test": "npx tsx watch ./test/index"
   },
   "type": "module",
   "types": "./dist",
   "typesVersions": {
     "*": {
-      "class": [
+      ".": [
         "./dist/index.d.ts"
       ]
     }

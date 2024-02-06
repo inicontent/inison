@@ -96,7 +96,8 @@ export default class Inison {
 
     const parsedValue = Inison.s.slice(start, Inison.index);
 
-    if (parsedValue.indexOf("\\") !== -1)
+    if (parsedValue === "") return null;
+    else if (parsedValue.indexOf("\\") !== -1)
       return Inison.unescapeSpecialChars(parsedValue);
     else if (parsedValue === "false") return false;
     else if (parsedValue === "null") return null;

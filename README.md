@@ -2,7 +2,7 @@
 
 # Inison :pencil:
 
-[![npmjs](https://img.shields.io/npm/dm/inison.svg?style=flat)](https://www.npmjs.org/package/inibase) [![License](https://img.shields.io/github/license/inicontent/inison.svg?style=flat&colorA=18181B&colorB=28CF8D)](./LICENSE) [![Activity](https://img.shields.io/github/commit-activity/m/inicontent/inison)](https://github.com/inicontent/inison/pulse) [![GitHub stars](https://img.shields.io/github/stars/inicontent/inison?style=social)](https://github.com/inicontent/inison)
+[![npmjs](https://img.shields.io/npm/dm/inison.svg?style=flat)](https://www.npmjs.org/package/inison) [![License](https://img.shields.io/github/license/inicontent/inison.svg?style=flat&colorA=18181B&colorB=28CF8D)](./LICENSE) [![Activity](https://img.shields.io/github/commit-activity/m/inicontent/inison)](https://github.com/inicontent/inison/pulse) [![GitHub stars](https://img.shields.io/github/stars/inicontent/inison?style=social)](https://github.com/inicontent/inison)
 
 > An alternative to JSON, aiming to reduce disk usage by storing decoded data and eliminating double-quotes :fire:
 

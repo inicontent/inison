@@ -6,3 +6,4 @@ dist
 
 # Test
 test
+pnpm-lock.yaml

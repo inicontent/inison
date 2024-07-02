@@ -7,7 +7,7 @@ const specialChars = new Set(specialCharsArr);
 let index: number;
 let s: string;
 
-function stringify(obj: valueT | objT | arrT): string {
+function stringify(obj: any): string {
 	if (obj === undefined || obj === null) return String(obj);
 
 	if (Array.isArray(obj)) return `[${obj.map(stringify).join(",")}]`;
@@ -26,7 +26,7 @@ function stringify(obj: valueT | objT | arrT): string {
 		: stringifiedObj;
 }
 
-function unstringify(input: string) {
+function unstringify(input: string): any {
 	if (input === "null") return null;
 	if (input === "undefined") return undefined;
 

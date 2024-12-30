@@ -1,39 +1,44 @@
 type valueT = string | number | boolean | null | undefined;
 type objT = Record<string, valueT>;
 type arrT = valueT[];
+type DefaultType = Record<string, any> | any[];
 
 const specialCharsArr = [",", ":", "[", "]", "{", "}"];
 const specialChars = new Set(specialCharsArr);
 let index: number;
 let s: string;
 
-function stringify(obj: any): string {
-	if (obj === undefined || obj === null) return String(obj);
+export function stringify<T = DefaultType>(data: T): string {
+	if (data === undefined || data === null) return String(data);
+	if (Array.isArray(data)) return `[${[...data].map(stringify).join(",")}]`;
 
-	if (Array.isArray(obj)) return `[${obj.map(stringify).join(",")}]`;
+	if (typeof data === "object" && data !== null) {
+		const clonedData: Record<string, any> = { ...data };
 
-	if (typeof obj === "object" && obj !== null) {
-		const objKeys = Object.keys(obj);
+		const objKeys = Object.keys(data);
 		const result: string[] = [];
 
-		for (const key of objKeys) result.push(`${key}:${stringify(obj[key])}`);
+		for (const key of objKeys)
+			result.push(`${key}:${stringify<T>(clonedData[key])}`);
 
 		return `{${result.join(",")}}`;
 	}
-	const stringifiedObj = String(obj);
+	const stringifiedObj = String(data);
 	return specialCharsArr.some((char) => stringifiedObj.indexOf(char))
 		? escapeSpecialChars(stringifiedObj)
 		: stringifiedObj;
 }
 
-function unstringify(input: string): any {
+export function unstringify<T = DefaultType>(
+	input: string,
+): T | null | undefined {
 	if (input === "null") return null;
 	if (input === "undefined") return undefined;
 
 	index = 0;
 	s = input;
 
-	return parseValue();
+	return parseValue() as T;
 }
 
 function parseArray() {

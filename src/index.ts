@@ -10,16 +10,13 @@ let s: string;
 
 export function stringify<T = DefaultType>(data: T): string {
 	if (data === undefined || data === null) return String(data);
-	if (Array.isArray(data)) return `[${[...data].map(stringify).join(",")}]`;
+	if (Array.isArray(data)) return `[${data.map(stringify).join(",")}]`;
 
 	if (typeof data === "object" && data !== null) {
-		const clonedData: Record<string, any> = { ...data };
-
 		const objKeys = Object.keys(data);
 		const result: string[] = [];
 
-		for (const key of objKeys)
-			result.push(`${key}:${stringify<T>(clonedData[key])}`);
+		for (const key of objKeys) result.push(`${key}:${stringify<T>(data[key])}`);
 
 		return `{${result.join(",")}}`;
 	}

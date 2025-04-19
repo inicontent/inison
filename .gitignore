@@ -8,3 +8,4 @@ dist
 /*.test.*
 
 pnpm-lock.yaml
+config.bat

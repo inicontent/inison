@@ -1,6 +1,6 @@
 {
 	"name": "inison",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"author": {
 		"name": "Karim Amahtil",
 		"email": "karim.amahtil@gmail.com"
@@ -14,7 +14,9 @@
 		"url": "https://github.com/inicontent/inison/issues"
 	},
 	"description": "An alternative to JSON, aiming to reduce disk usage by storing decoded data and eliminating double-quotes",
-	"files": ["/dist"],
+	"files": [
+		"/dist"
+	],
 	"funding": "https://github.com/sponsors/inicontent",
 	"homepage": "https://github.com/inicontent/inison#readme",
 	"keywords": [
@@ -41,7 +43,9 @@
 	"types": "./dist",
 	"typesVersions": {
 		"*": {
-			".": ["./dist/index.d.ts"]
+			".": [
+				"./dist/index.d.ts"
+			]
 		}
 	},
 	"devDependencies": {

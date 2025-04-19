@@ -14,9 +14,7 @@
 		"url": "https://github.com/inicontent/inison/issues"
 	},
 	"description": "An alternative to JSON, aiming to reduce disk usage by storing decoded data and eliminating double-quotes",
-	"files": [
-		"/dist"
-	],
+	"files": ["/dist"],
 	"funding": "https://github.com/sponsors/inicontent",
 	"homepage": "https://github.com/inicontent/inison#readme",
 	"keywords": [
@@ -36,15 +34,14 @@
 	"scripts": {
 		"prepublish": "npx -q tsc",
 		"build": "npx -q tsc",
-		"test": "npx -q tsx ./tests/inison.test.ts"
+		"test": "npx -q tsx ./tests/inison.test.ts",
+		"benchmark": "./benchmark/run.js"
 	},
 	"type": "module",
 	"types": "./dist",
 	"typesVersions": {
 		"*": {
-			".": [
-				"./dist/index.d.ts"
-			]
+			".": ["./dist/index.d.ts"]
 		}
 	},
 	"devDependencies": {

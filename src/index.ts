@@ -1,146 +1,145 @@
-type valueT = string | number | boolean | null | undefined;
-type objT = Record<string, valueT>;
-type arrT = valueT[];
-type DefaultType = Record<string, any> | any[];
+type Primitive = string | number | boolean | null | undefined;
+export type Data = Primitive | Data[] | { [k: string]: Data };
 
-const specialCharsArr = [",", ":", "[", "]", "{", "}"];
-const specialChars = new Set(specialCharsArr);
-let index: number;
-let s: string;
+/* ─────────── delimiter table (charCode → bool) ─────────── */
 
-export function stringify<T = DefaultType>(data: T): string {
-	if (data === undefined || data === null) return String(data);
-	if (Array.isArray(data)) return `[${data.map(stringify).join(",")}]`;
+const DELIMS = new Uint8Array(128); // 1 = delimiter
+for (const code of [44, 58, 123, 125, 91, 93, 10]) // , : { } [ ] \n
+	DELIMS[code] = 1;
+const isDelim = (code: number) => code < 128 && DELIMS[code] === 1;
 
-	if (typeof data === "object" && data !== null) {
-		const objKeys = Object.keys(data);
-		const result: string[] = [];
+/* ─────────── escape / unescape helpers ─────────── */
 
-		for (const key of objKeys) result.push(`${key}:${stringify<T>(data[key])}`);
+const RE_NEEDS_ESCAPE = /[,:{}\[\]\n]/; // quick test
+const RE_ESCAPE = /[,:{}\[\]\n]/g; // during stringify
+const RE_UNESCAPE = /\\(n|[,:{}\[\]])/g; // during parse
 
-		return `{${result.join(",")}}`;
+const needsEscape = (s: string) => RE_NEEDS_ESCAPE.test(s);
+
+const escapeStr = (s: string) =>
+	s.replace(RE_ESCAPE, (ch) => (ch === "\n" ? "\\n" : `\\${ch}`));
+
+const unescapeStr = (s: string) =>
+	s.replace(RE_UNESCAPE, (_, ch) => (ch === "n" ? "\n" : ch));
+
+/* ─────────── hybrid builders for arrays / objects ─────────── */
+
+const THRESHOLD = 32; // switch point
+
+function buildArray(arr: readonly Data[]): string {
+	if (arr.length < THRESHOLD) {
+		let out = "[";
+		for (let i = 0; i < arr.length; ++i) {
+			if (i) out += ",";
+			out += stringify(arr[i]);
+		}
+		return `${out}]`;
 	}
-	const stringifiedObj = String(data);
-	return specialCharsArr.some((char) => stringifiedObj.indexOf(char))
-		? escapeSpecialChars(stringifiedObj)
-		: stringifiedObj;
+	const parts = new Array<string>(arr.length);
+	for (let i = 0; i < arr.length; ++i) parts[i] = stringify(arr[i]);
+	return `[${parts.join(",")}]`;
 }
 
-export function unstringify<T = DefaultType>(
-	input: string,
-): T | null | undefined {
+function buildObject(obj: { [k: string]: Data }): string {
+	const keys = Object.keys(obj);
+	if (keys.length < THRESHOLD) {
+		let out = "{";
+		for (let i = 0; i < keys.length; ++i) {
+			const k = keys[i]!;
+			if (i) out += ",";
+			out += `${k}:${stringify((obj as any)[k])}`;
+		}
+		return `${out}}`;
+	}
+	const parts = new Array<string>(keys.length);
+	for (let i = 0; i < keys.length; ++i) {
+		const k = keys[i]!;
+		parts[i] = `${k}:${stringify((obj as any)[k])}`;
+	}
+	return `{${parts.join(",")}}`;
+}
+
+/* ─────────── stringify ─────────── */
+
+export function stringify(data: Data): string {
+	if (data == null) return String(data); // null | undefined
+	if (Array.isArray(data)) return buildArray(data);
+	if (typeof data === "object") return buildObject(data as any);
+
+	const s = String(data);
+	return needsEscape(s) ? escapeStr(s) : s;
+}
+
+/* ─────────── unstringify / streaming parser ─────────── */
+
+let src = ""; // shared input
+let pos = 0; // cursor
+
+export function unstringify<T = any>(input: string): T | null | undefined {
 	if (input === "null") return null;
 	if (input === "undefined") return undefined;
-
-	index = 0;
-	s = input;
-
-	return parseValue() as T;
+	src = input;
+	pos = 0;
+	return parse() as T;
 }
 
-function parseArray() {
-	const array: arrT = [];
-	const len = s.length;
+function parse(): Data {
+	const ch = src[pos];
 
-	index++; // skip '['
-	while (index < len && s[index] !== "]") {
-		array.push(parseValue() as valueT);
-		if (s[index] === ",") index++; // skip ','
-	}
-	index++; // skip ']'
-	return array;
-}
+	if (ch === "[") return parseArray();
+	if (ch === "{") return parseObject();
 
-function parseObject() {
-	const obj: objT = {};
-	const len = s.length;
+	// primitive
+	const start = pos;
+	const n = src.length;
 
-	index++; // skip '{'
-	while (index < len && s[index] !== "}") {
-		const [key, value] = parseKeyValue();
-		obj[key] = value;
-
-		if (s[index] === ",") index++; // skip ','
-	}
-	index++; // skip '}'
-	return obj;
-}
-
-function parseKeyValue(): [string, valueT] {
-	const key = parseValue() as string;
-
-	if (s[index] !== ":") throw new Error('Expected ":" after key');
-
-	index++; // skip ':'
-	const value = parseValue() as valueT;
-
-	return [key, value];
-}
-
-function parseValue(): valueT | objT | arrT {
-	const len = s.length;
-	const start = index;
-
-	if (s[index] === "[" || s[index] === "{")
-		return s[index] === "[" ? parseArray() : parseObject();
-
-	while (index < len && !specialChars.has(s[index]))
-		index += s[index] === "\\" && specialChars.has(s[index + 1]) ? 2 : 1; // Skip both '\\' and ','
-
-	const parsedValue = s.slice(start, index);
-
-	if (parsedValue === "") return null;
-	if (parsedValue.indexOf("\\") !== -1)
-		return unescapeSpecialChars(parsedValue);
-	if (parsedValue === "false") return false;
-	if (parsedValue === "null") return null;
-	if (parsedValue === "undefined") return undefined;
-	if (parsedValue === "true") return true;
-
-	const numParsedValue = Number(parsedValue);
-
-	// Check if the parsed value is a number and convert it
-	if (
-		Number.isInteger(numParsedValue) &&
-		parsedValue !== null &&
-		parsedValue.at(0) !== "0"
-	)
-		return numParsedValue;
-
-	return parsedValue;
-}
-
-function unescapeSpecialChars(value: string): string {
-	let unescapedValue = "";
-	const len = value.length;
-
-	for (let i = 0; i < len; i++) {
-		if (value[i] === "\\" && i + 1 < len) {
-			const nextChar = value[i + 1];
-			if (specialChars.has(nextChar)) {
-				unescapedValue += nextChar;
-				i++;
-				continue;
-			}
+	while (pos < n) {
+		const code = src.charCodeAt(pos);
+		if (isDelim(code)) break;
+		if (code === 92 /* \ */ && pos + 1 < n) {
+			pos += 2;
+			continue;
 		}
-		unescapedValue += value[i];
+		++pos;
 	}
 
-	return unescapedValue;
+	const raw = src.slice(start, pos);
+
+	if (raw.includes("\\")) return unescapeStr(raw);
+	if (raw === "true") return true;
+	if (raw === "false") return false;
+	if (raw === "null") return null;
+	if (raw === "undefined") return undefined;
+
+	const num = Number(raw);
+	return Number.isFinite(num) && String(num) === raw ? num : raw;
 }
 
-function escapeSpecialChars(value: string): string {
-	let escapedValue = "";
-	const len = value.length;
-
-	for (let i = 0; i < len; i++) {
-		const char = value[i];
-		if (specialChars.has(char)) escapedValue += "\\";
-		escapedValue += char;
+function parseArray(): Data[] {
+	++pos; // skip '['
+	const out: Data[] = [];
+	while (src[pos] !== "]") {
+		out.push(parse());
+		if (src[pos] === ",") ++pos; // skip ','
 	}
-
-	return escapedValue;
+	++pos; // skip ']'
+	return out;
 }
+
+function parseObject(): { [k: string]: Data } {
+	++pos; // skip '{'
+	const out: { [k: string]: Data } = {};
+	while (src[pos] !== "}") {
+		const key = parse() as string;
+		++pos; // skip ':'
+		out[key] = parse();
+		if (src[pos] === ",") ++pos; // skip ','
+	}
+	++pos; // skip '}'
+	return out;
+}
+
+/* ─────────── façade ─────────── */
 
 export default class Inison {
 	static stringify = stringify;

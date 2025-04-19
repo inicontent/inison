@@ -40,21 +40,23 @@ function buildArray(arr: readonly Data[]): string {
 	return `[${parts.join(",")}]`;
 }
 
-function buildObject(obj: { [k: string]: Data }): string {
-	const keys = Object.keys(obj);
+function buildObject(obj: Record<string, Data>): string {
+	const keys = Object.keys(obj) as string[];
+
 	if (keys.length < THRESHOLD) {
 		let out = "{";
-		for (let i = 0; i < keys.length; ++i) {
-			const k = keys[i]!;
+		for (let i = 0, len = keys.length; i < len; ++i) {
+			const k = keys[i]; // k: string (no |undefined)
 			if (i) out += ",";
-			out += `${k}:${stringify((obj as any)[k])}`;
+			out += `${k}:${stringify(obj[k])}`;
 		}
 		return `${out}}`;
 	}
+
 	const parts = new Array<string>(keys.length);
-	for (let i = 0; i < keys.length; ++i) {
-		const k = keys[i]!;
-		parts[i] = `${k}:${stringify((obj as any)[k])}`;
+	for (let i = 0, len = keys.length; i < len; ++i) {
+		const k = keys[i]; // k: string
+		parts[i] = `${k}:${stringify(obj[k])}`;
 	}
 	return `{${parts.join(",")}}`;
 }
@@ -76,6 +78,45 @@ let src = ""; // shared input
 let pos = 0; // cursor
 
 export function unstringify<T = any>(input: string): T | null | undefined {
+	try {
+		return safeUnstringify<T>(input); // ➊ fast path
+	} catch {
+		// caller said “don’t fix”
+		const fixed = autoCorrect(input);
+		return safeUnstringify<T>(fixed); // ➋ second attempt
+	}
+}
+
+function autoCorrect(input: string): string {
+	let s = input.trim();
+
+	/* 1. kill trailing commas before } or ]  */
+	s = s.replace(/,(\s*[}\]])/g, "$1");
+
+	/* 2. collapse consecutive commas          */
+	s = s.replace(/,{2,}/g, ",");
+
+	/* 3. balance brackets & braces            */
+	let openCurly = 0,
+		openSquare = 0;
+	for (let i = 0; i < s.length; ++i) {
+		const c = s.charCodeAt(i);
+		if (c === 123)
+			++openCurly; // {
+		else if (c === 125)
+			--openCurly; // }
+		else if (c === 91)
+			++openSquare; // [
+		else if (c === 93) --openSquare; // ]
+	}
+	if (openCurly > 0) s += "}".repeat(openCurly);
+	if (openSquare > 0) s += "]".repeat(openSquare);
+
+	/* 4. final sanity‑trim                    */
+	return s;
+}
+
+function safeUnstringify<T = any>(input: string): T | null | undefined {
 	if (input === "null") return null;
 	if (input === "undefined") return undefined;
 	src = input;
@@ -118,24 +159,33 @@ function parse(): Data {
 function parseArray(): Data[] {
 	++pos; // skip '['
 	const out: Data[] = [];
-	while (src[pos] !== "]") {
+	while (true) {
+		if (pos >= src.length) throw new Error("Unterminated array");
+		if (src[pos] === "]") {
+			++pos;
+			break;
+		}
 		out.push(parse());
-		if (src[pos] === ",") ++pos; // skip ','
+		if (src[pos] === ",") ++pos;
 	}
-	++pos; // skip ']'
 	return out;
 }
 
 function parseObject(): { [k: string]: Data } {
 	++pos; // skip '{'
 	const out: { [k: string]: Data } = {};
-	while (src[pos] !== "}") {
+	while (true) {
+		if (pos >= src.length) throw new Error("Unterminated object");
+		if (src[pos] === "}") {
+			++pos;
+			break;
+		}
 		const key = parse() as string;
+		if (src[pos] !== ":") throw new Error('Expected ":" after key');
 		++pos; // skip ':'
 		out[key] = parse();
-		if (src[pos] === ",") ++pos; // skip ','
+		if (src[pos] === ",") ++pos;
 	}
-	++pos; // skip '}'
 	return out;
 }
 
